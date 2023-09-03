@@ -28,68 +28,52 @@
 // #define CS_PIN    GPIO_NUM_16
 // #define SPI_CLOCK 8000000
 
-
-
-
-
-//  void spi_init() {
-
-//     spi_bus_config_t bus_config = {};
-//     bus_config.miso_io_num=GPIO_MISO;
-//     bus_config.mosi_io_num=GPIO_MOSI;
-//     bus_config.sclk_io_num=GPIO_SCLK;
-//     bus_config.quadwp_io_num=-1;
-//     bus_config.quadhd_io_num=-1;
-//     bus_config.max_transfer_sz=0;
-    
-//     spi_device_interface_config_t dev_config = {};
-//     dev_config.clock_speed_hz=10000000;
-//     dev_config.mode=1;
-//     dev_config.flags = 0;
-//     dev_config.duty_cycle_pos = 128; // 50% duty cycle
-//     dev_config.spics_io_num=GPIO_CS;
-//     dev_config.cs_ena_posttrans=3;
-//     dev_config.cs_ena_pretrans=3;
-//     dev_config.queue_size=20;
-//     dev_config.input_delay_ns = 40,
-//     dev_config.pre_cb = NULL;
-
-    
-//     spi_bus_initialize(HSPI_HOST,&bus_config,SPI_DMA_CH_AUTO);
-//     spi_bus_add_device(HSPI_HOST,&dev_config,&spi);
-//     gpio_set_pull_mode(GPIO_MOSI, GPIO_PULLUP_ONLY);
-//     gpio_set_pull_mode(GPIO_SCLK, GPIO_PULLUP_ONLY);
-//     gpio_set_pull_mode(GPIO_CS, GPIO_PULLUP_ONLY);
-
-// }
-
   
-spi_device_handle_t device;  
+spi_device_handle_t device;
+SPI_t &mySPI = hspi;
 
-SPI_t &mySPI = hspi;  // vspi and hspi are the default objects
+uint8_t val0[5] = {0x80,0x22,0x06,0x68,0x0C};
+uint8_t val1[5] = {0x81,0x55,0x40,0x00,0xF0};
+uint8_t val2[5] = {0x82,0x20,0x00,0x00,0x0A};
+uint8_t val3[5] = {0x83,0x18,0x00,0x00,0x0B};
+uint8_t val4[5] = {0x84,0x20,0x00,0x40,0x01};
+uint8_t val5[5] = {0x85,0x00,0x00,0x00,0x02};
+uint8_t val6[5] = {0x86,0x00,0x00,0x00,0x03};
 
-uint8_t val0[5] = {0x80,0x43,0x0B,0xE8,0x00};
-uint8_t val1[5] = {0x81,0x21,0x44,0x40,0x00};
-uint8_t val2[5] = {0x82,0xA0,0x13,0x88,0x00};
-uint8_t val3[5] = {0x83,0xD0,0xA2,0x48,0x00};
-uint8_t val4[5] = {0x84,0x10,0x00,0x40,0x00};
-uint8_t val5[5] = {0x85,0x40,0x00,0x00,0x00};
-uint8_t val6[5] = {0x86,0xC0,0xC0,0x61,0x00};
 
-void setup()
-{
-    
-   // gpio_set_pull_mode(MOSI_PIN, GPIO_PULLUP_ONLY);
-   //  gpio_set_pull_mode(SCLK_PIN, GPIO_PULLUP_ONLY);
-   //  gpio_set_pull_mode(CS_PIN, GPIO_PULLUP_ONLY);
-   Serial.begin(9600);
-}
+uint32_t registers_data[7] = { 0 };
 
-void loop(){
-    uint8_t buffer[1];
-   int auxiliar = 0;
-   mySPI.begin(MOSI_PIN, MISO_PIN, SCLK_PIN);
-   mySPI.addDevice(SPI_MODE, SPI_CLOCK, CS_PIN, &device);
+#define TDC_WRITE_TO_REGISTER 0x80
+#define TDC_READ_FROM_REGISTER 0xB0
+#define TDC_REG0 0x00
+#define TDC_REG1 0x01
+#define TDC_REG2 0x02
+#define TDC_REG3 0x03
+#define TDC_REG4 0x04
+#define TDC_REG5 0x05
+#define TDC_REG6 0x06
+#define TDC_STATUS 0x04
+#define TDC_RESULT1 0x00
+#define TDC_RESULT2 0x01
+#define TDC_RESULT3 0x02
+#define TDC_RESULT4 0x03
+
+#define TDC_READ_CONFIG_FROM_EEPROM 0xF0
+#define TDC_INIT 0x70
+#define TDC_RESET 0x50
+#define TDC_START_CAL 0x04
+#define TDC_START_CAL_RES 0x03
+#define TDC_START_TOF 0x01
+
+enum class MEASUREMENT_ERROR {
+	NO_ERROR = 0,
+	TIMEOUT_START,
+	TIMEOUT_STOP,
+	OVERFLOW
+};
+
+void GP22_init(){
+
    mySPI.writeByte(device, 0x0 , 0x50);
    vTaskDelay(250 / portTICK_PERIOD_MS);
    mySPI.writeByte(device, 0x0, 0x70);
@@ -101,12 +85,38 @@ void loop(){
    mySPI.writeBytes(device,0x84,5,val4);
    mySPI.writeBytes(device,0x85,5,val5);
    mySPI.writeBytes(device,0x86,5,val6);
-  
-      //mySPI.readBytes(device, 0x5,2,buffer);
-      auxiliar;
-      Serial.println(auxiliar);
-      vTaskDelay(20 / portTICK_PERIOD_MS);
- 
+   vTaskDelay(25 / portTICK_PERIOD_MS);
+
+}
+
+void teste(){
+   uint8_t buffer[2];
+   uint8_t i = 0;
+   while(i++ < TIMEOUT_RESET) {
+         mySPI.readBytes(device, 0xB1,2,buffer);
+         vTaskDelay(2);
+      }
+   }      
+
+__attribute__((unused)) void setup(){
+    
+   Serial.begin(9600);
+   
+   mySPI.begin(MOSI_PIN, MISO_PIN, SCLK_PIN);
+   mySPI.addDevice(SPI_MODE, SPI_CLOCK, CS_PIN, &device);
+}
+
+
+__attribute__((unused)) void loop() {
+
+   GP22_init();
+   teste();
+
+   while(true){
+
+
+      vTaskDelay(2000 / portTICK_PERIOD_MS);
+   }
 
 
 

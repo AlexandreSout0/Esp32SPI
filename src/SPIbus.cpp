@@ -155,7 +155,7 @@ esp_err_t SPI::readByte(spi_device_handle_t handle, uint8_t regAddr, uint8_t *da
 
 esp_err_t SPI::readBytes(spi_device_handle_t handle, uint8_t regAddr, size_t length, uint8_t *data) {
     if(length == 0) return ESP_ERR_INVALID_SIZE;
-    spi_transaction_t transaction;
+    spi_transaction_t transaction = {0};
     transaction.flags = 0;
     transaction.cmd = 8;
     transaction.addr = regAddr | SPIBUS_READ;
@@ -173,7 +173,7 @@ esp_err_t SPI::readBytes(spi_device_handle_t handle, uint8_t regAddr, size_t len
             SPIBUS_LOG_RW("[%s, handle:0x%X] Read_ %d bytes from register 0x%X, data: %s", (host == 1 ? "HSPI" : "VSPI"), (uint32_t)handle, length, regAddr, str);
         }
     #endif
-    
+
     return err;
 }
 
