@@ -236,26 +236,21 @@ void sentOpcode(uint8_t opcode){
 // Se os 16 bits forem 0xFFFF, o valor de retorno será 0xFFFFFFFF
 uint32_t read_bytes(uint8_t reg, bool read16bits){
    
-   uint8_t buffer[3] = {0,0};
-
-   mySPI.readBytes(device,reg ,3,buffer);
-
-//   Serial.print("read bytes hex: ");
-//   for (int i = 0; i < 5; i++) {
-//     Serial.print("0x");
-//     Serial.print(buffer[i], HEX);
-//     Serial.print(" ");
-//   }
-//   Serial.println();
+   size_t len = 4;
+   uint8_t val[len];
    
-   Serial.print("0x");
-   Serial.print(buffer[1], HEX);
-   Serial.print(buffer[2], HEX);
-   Serial.print(buffer[3], HEX);
+   mySPI.readBytes(device,reg,len,val);
+
+  Serial.print("read_bytes: ");
+  for (int i = 1; i < len + 1; i++) {
+    Serial.print("0x");
+    Serial.print(val[i], HEX);
+    Serial.print(" ");
+  }
    Serial.print("\r\n");
 
-   uint32_t result = 0x0;//(uint32_t)buffer[0] << 24 | (uint32_t)buffer[1] << 16 | (uint32_t)buffer[2] << 8 | buffer[3];
-
+   uint32_t result = (uint32_t)val[1] << 24 | (uint32_t)val[2] << 16 | (uint32_t)val[3] << 8 | val[4];
+    Serial.print(result, HEX);
 	return result;
 }
 
@@ -285,11 +280,6 @@ void read_bytes2(uint8_t reg, size_t len){
    Serial.print("\r\n");
    
 }
-
-
-
-
-
 
 
 //Lê o status
@@ -550,7 +540,7 @@ __attribute__((unused)) void setup(){
 
 __attribute__((unused)) void loop() {
 
-   read_bytes2(0x04, 4);
+   read_bytes(TDC_STATUS, 4);
 
    //testConnection();
    //Serial.println(status,HEX);
