@@ -1,6 +1,7 @@
  #include "SPIbus.h"
  #include <stdio.h>
  #include <stdint.h>
+ #include <string.h>
  #include "driver/spi_common.h"
  #include "driver/spi_master.h"
  #include "esp_log.h"
@@ -54,9 +55,9 @@ esp_err_t SPI::close() {
 
 esp_err_t SPI::addDevice(uint8_t mode, uint32_t clock_speed_hz, int cs_io_num, spi_device_handle_t *handle) {
     spi_device_interface_config_t dev_config = {0};
-    // dev_config.command_bits = 0;
+    dev_config.command_bits = 0;
     // dev_config.address_bits = 8;
-    // dev_config.dummy_bits = 0;
+    dev_config.dummy_bits = 0;
     dev_config.mode = mode;
     dev_config.duty_cycle_pos = 128;  // default 128 = 50%/50% duty
     dev_config.cs_ena_pretrans = 3;  // 0 not used
@@ -118,14 +119,7 @@ esp_err_t SPI::writeBytes(spi_device_handle_t handle, uint8_t regAddr, size_t le
     transaction.tx_buffer = data;
     transaction.rx_buffer = NULL;
     esp_err_t err = spi_device_transmit(handle, &transaction);
-    #if defined CONFIG_SPIBUS_LOG_READWRITES
-        if (!err) { 
-            char str[length*5+1];
-            for(size_t i = 0; i < length; i++) 
-                sprintf(str+i*5, "0x%s%X ", (data[i] < 0x10 ? "0" : ""), data[i]);
-            SPIBUS_LOG_RW("[%s, handle:0x%X] Write %d bytes to__ register 0x%X, data: %s", (host == 1 ? "HSPI" : "VSPI"), (uint32_t)handle, length, regAddr, str);
-        }
-    #endif
+
     return err;
 }
 
@@ -155,24 +149,24 @@ esp_err_t SPI::readByte(spi_device_handle_t handle, uint8_t regAddr, uint8_t *da
 
 esp_err_t SPI::readBytes(spi_device_handle_t handle, uint8_t regAddr, size_t length, uint8_t *data) {
     if(length == 0) return ESP_ERR_INVALID_SIZE;
+
     spi_transaction_t transaction = {0};
+    // transaction.flags = 0;
+    // transaction.cmd = 8;
+    // transaction.addr = regAddr & SPIBUS_READ;
+    // transaction.length = (length + 1)* 8;
+    // transaction.rxlength = length * 8;
+    // transaction.user = NULL;
+    // transaction.tx_buffer = NULL;
+    // transaction.rx_buffer = data;
+    uint8_t cmdAndAddr = (SPIBUS_READ | regAddr );
+    uint8_t out[1] = {cmdAndAddr};
+
     transaction.flags = 0;
-    transaction.cmd = 8;
-    transaction.addr = regAddr | SPIBUS_READ;
-    transaction.length = length * 8;
-    transaction.rxlength = length * 8;
-    transaction.user = NULL;
-    transaction.tx_buffer = 0x00;
+    transaction.length = 8 * sizeof(data);
+    transaction.tx_buffer = out;
     transaction.rx_buffer = data;
     esp_err_t err = spi_device_transmit(handle, &transaction);    
-    #if defined CONFIG_SPIBUS_LOG_READWRITES
-        if (!err) { 
-            char str[length*5+1]; 
-            for(size_t i = 0; i < length; i++) 
-            sprintf(str+i*5, "0x%s%X ", (data[i] < 0x10 ? "0" : ""), data[i]);
-            SPIBUS_LOG_RW("[%s, handle:0x%X] Read_ %d bytes from register 0x%X, data: %s", (host == 1 ? "HSPI" : "VSPI"), (uint32_t)handle, length, regAddr, str);
-        }
-    #endif
 
     return err;
 }
